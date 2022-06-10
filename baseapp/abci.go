@@ -662,16 +662,18 @@ func (app *BaseApp) createQueryContext(height int64, prove bool) (sdk.Context, e
 			)
 	}
 
-	//Get block info from tendermint
-	// testa, bruh := rpcclient.Client.Block(app.checkState.ctx, height)
-	// localClient := local.New()
-	// app.
+	logger := app.Logger()
+
+	logger.Info(fmt.Sprintf("createQueryContext"))
 
 	// Create a connection to the gRPC server.
 	grpcConn, err := grpc.Dial(
 		"127.0.0.1:9090",    // Or your gRPC server address.
 		grpc.WithInsecure(), // The Cosmos SDK doesn't support any transport security mechanism.
 	)
+
+	logger.Info(fmt.Sprintf("gprcConn state: %s", grpcConn.GetState().String()))
+
 	defer grpcConn.Close()
 
 	grpcClient := tmservice.NewServiceClient(grpcConn)
@@ -680,6 +682,8 @@ func (app *BaseApp) createQueryContext(height int64, prove bool) (sdk.Context, e
 	if err != nil {
 		return sdk.Context{}, err
 	}
+
+	logger.Info(fmt.Sprintf("Requested height: %d. Response height: %d", height, blockRes.Block.GetHeader().Time))
 
 	// branch the commit-multistore for safety
 	ctx := sdk.NewContext(
