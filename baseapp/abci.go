@@ -1,7 +1,6 @@
 package baseapp
 
 import (
-	"context"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -22,9 +21,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-
-	tmservice "github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
-	grpc "google.golang.org/grpc"
 )
 
 // InitChain implements the ABCI interface. It runs the initialization logic
@@ -662,33 +658,24 @@ func (app *BaseApp) createQueryContext(height int64, prove bool) (sdk.Context, e
 			)
 	}
 
-	logger := app.Logger()
-
-	logger.Info(fmt.Sprintf("createQueryContext"))
-
-	// Create a connection to the gRPC server.
-	grpcConn, err := grpc.Dial(
-		"127.0.0.1:9090",    // Or your gRPC server address.
-		grpc.WithInsecure(), // The Cosmos SDK doesn't support any transport security mechanism.
-	)
-
-	logger.Info(fmt.Sprintf("gprcConn state: %s", grpcConn.GetState().String()))
-
-	defer grpcConn.Close()
-
-	grpcClient := tmservice.NewServiceClient(grpcConn)
-
-	blockRes, err := grpcClient.GetBlockByHeight(context.Background(), &tmservice.GetBlockByHeightRequest{Height: height}, grpc.EmptyCallOption{})
-	if err != nil {
-		return sdk.Context{}, err
+	timestamps := map[int64]int64{
+		7563136: 1652057998,
+		7583084: 1652212798,
+		7592133: 1652284799,
+		7615292: 1652489998,
+		7811404: 1653717601,
+		7741139: 1653278397,
 	}
 
-	logger.Info(fmt.Sprintf("Requested height: %d. Response height: %d", height, blockRes.Block.GetHeader().Time))
+	timestamp := timestamps[height]
+
+	logger := app.Logger()
+	logger.Info(fmt.Sprintf("requested height: %d. Equivalent timestamp: %d", height, timestamp))
 
 	// branch the commit-multistore for safety
 	ctx := sdk.NewContext(
 		cacheMS, app.checkState.ctx.BlockHeader(), true, app.logger,
-	).WithMinGasPrices(app.minGasPrices).WithBlockHeight(height).WithBlockTime(blockRes.Block.GetHeader().Time)
+	).WithMinGasPrices(app.minGasPrices).WithBlockHeight(height).WithBlockTime(time.Unix(timestamp, 0))
 
 	return ctx, nil
 }
